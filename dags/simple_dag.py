@@ -13,14 +13,21 @@ default_args = {'retries': 5,  # Number of retries before marking as failed
 
 
 # Function to be called in a task
-def _downloading_data():
+def _downloading_data(ti):
     with open('/tmp/my_file.txt', 'w') as f:
         f.write("my_data")
+
+    ti.xcom_push(key='my_key', value=42)
 
 
 def _get_metadata(**kwargs):
     # By using kwargs, we get airflow context information
     print(kwargs)
+
+
+def _check_data(ti):
+    my_xcom = ti.xcom_pull(key='my_key', task_ids=['downloading_data'])
+    print("XCOM", my_xcom)
 
 
 def _get_named_metadata(ds):
@@ -54,7 +61,10 @@ with DAG(dag_id="simple_dag",
                             python_callable=my_param_func,
                             op_kwargs={'my_param': 'Rodrigo'})
 
+    task_7 = PythonOperator(task_id="xcoms_data",
+                            python_callable=_check_data)
+
 
 task_1 >> task_2 >> [task_3, task_4]
-task_4 >> [task_5, task_6]
+task_4 >> [task_5, task_6] >> task_7
 
